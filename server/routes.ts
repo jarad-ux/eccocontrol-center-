@@ -134,10 +134,20 @@ export async function registerRoutes(
     try {
       console.log("Creating sale, received body:", JSON.stringify(req.body, null, 2));
       
-      // Convert date strings to Date objects before validation
+      // Convert date strings to Date objects and empty strings to null for numeric fields
       const body = { ...req.body };
       if (body.installationDate && typeof body.installationDate === 'string') {
         body.installationDate = new Date(body.installationDate);
+      }
+      // Convert empty strings to null for numeric fields
+      if (body.downPayment === '' || body.downPayment === undefined) {
+        body.downPayment = null;
+      }
+      if (body.monthlyPayment === '' || body.monthlyPayment === undefined) {
+        body.monthlyPayment = null;
+      }
+      if (body.saleAmount === '' || body.saleAmount === undefined) {
+        body.saleAmount = null;
       }
       
       const parseResult = insertSalesSubmissionSchema.safeParse(body);
