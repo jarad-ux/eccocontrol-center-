@@ -26,8 +26,9 @@ const BANKS = [
 ];
 
 const LEAD_SOURCES = [
-  { id: 'lead', name: 'Company Lead' },
-  { id: 'self', name: 'Self-Generated' }
+  { id: 'self', name: 'Self Generated' },
+  { id: 'mars', name: 'MARS' },
+  { id: 'dmv', name: 'DMV' }
 ];
 
 const EQUIPMENT_TYPES = [
