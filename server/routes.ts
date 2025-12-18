@@ -23,7 +23,28 @@ export async function registerRoutes(
   app.get("/api/sales-reps/me", isAuthenticated, async (req: any, res: Response) => {
     try {
       const userId = req.user.claims.sub;
-      const rep = await storage.getSalesRepByUserId(userId);
+      let rep = await storage.getSalesRepByUserId(userId);
+      
+      // Auto-create admin user if no sales reps exist (first user setup)
+      if (!rep) {
+        const allReps = await storage.getSalesReps();
+        if (allReps.length === 0) {
+          // First user becomes admin
+          const userName = req.user.claims.first_name && req.user.claims.last_name
+            ? `${req.user.claims.first_name} ${req.user.claims.last_name}`
+            : req.user.claims.email || 'Admin User';
+          
+          rep = await storage.createSalesRep({
+            userId: userId,
+            name: userName,
+            role: 'admin',
+            division: 'all',
+            isActive: true,
+          });
+          console.log(`Auto-created first admin user: ${userName} (${userId})`);
+        }
+      }
+      
       res.json(rep || null);
     } catch (error) {
       console.error("Error fetching current sales rep:", error);
