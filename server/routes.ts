@@ -3,71 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated } from "./replit_integrations/auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
-import { insertSalesSubmissionSchema, insertSalesRepSchema, insertAppSettingsSchema, type SalesSubmission } from "@shared/schema";
+import { insertSalesSubmissionSchema, insertSalesRepSchema, insertAppSettingsSchema } from "@shared/schema";
 import { z } from "zod";
-import Anthropic from "@anthropic-ai/sdk";
-
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
-
-async function addToDispatchViaMCP(sale: SalesSubmission, mcpServerUrl: string, mcpApiKey: string): Promise<{ success: boolean; message: string }> {
-  try {
-    console.log(`[MCP] Adding self-generated lead to Dispatch.me: ${sale.customerFirstName} ${sale.customerLastName}`);
-    
-    const customerName = `${sale.customerFirstName} ${sale.customerLastName}`;
-    const fullAddress = `${sale.customerAddress}, ${sale.customerCity}, ${sale.customerState} ${sale.customerZip}`;
-    
-    // Prepare the job data for Dispatch.me via Zapier MCP
-    const dispatchJobData = {
-      customer_name: customerName,
-      phone: sale.customerPhone,
-      email: sale.customerEmail || '',
-      address: fullAddress,
-      street: sale.customerAddress,
-      city: sale.customerCity,
-      state: sale.customerState,
-      zip: sale.customerZip,
-      equipment_type: sale.equipmentType,
-      notes: `Self-generated lead. ${sale.equipmentNotes || ''} ${sale.installationNotes || ''}`.trim(),
-      lead_source: 'Self-Generated',
-      sale_amount: sale.saleAmount,
-      installation_date: sale.installationDate ? sale.installationDate.toISOString() : null,
-    };
-
-    // Call the Zapier MCP endpoint directly
-    // The shared URL is an HTTP endpoint that accepts JSON payloads
-    console.log(`[MCP] Calling Zapier MCP endpoint: ${mcpServerUrl}`);
-    
-    const response = await fetch(mcpServerUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${mcpApiKey}`,
-        'X-API-Key': mcpApiKey,
-      },
-      body: JSON.stringify({
-        action: 'create_dispatch_job',
-        data: dispatchJobData,
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log(`[MCP] Zapier MCP response status: ${response.status}`);
-    console.log(`[MCP] Zapier MCP response: ${responseText.substring(0, 500)}`);
-
-    if (response.ok) {
-      return { success: true, message: `Job created in Dispatch.me: ${responseText}` };
-    } else {
-      console.error(`[MCP] Zapier MCP failed: ${response.status} - ${responseText}`);
-      return { success: false, message: `MCP call failed: ${response.status} - ${responseText}` };
-    }
-  } catch (error: any) {
-    console.error(`[MCP] Error adding to Dispatch.me:`, error.message);
-    return { success: false, message: error.message };
-  }
-}
+import { addSaleToGoogleSheet, ensureSheetHeaders } from "./google-sheets";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -265,14 +203,21 @@ export async function registerRoutes(
         }
       }
       
-      // Auto-add self-generated leads to Dispatch.me via Claude MCP
-      if (submission.leadSource === 'self' && settings?.mcpServerUrl && settings?.mcpApiKey) {
-        console.log(`[MCP] Self-generated lead detected, adding to Dispatch.me...`);
-        const mcpResult = await addToDispatchViaMCP(submission, settings.mcpServerUrl, settings.mcpApiKey);
-        if (mcpResult.success) {
-          console.log(`[MCP] Successfully added to Dispatch.me`);
+      // Auto-add sale to Google Sheet if configured
+      if (settings?.googleSheetId) {
+        console.log(`[Google Sheets] Adding sale to Google Sheet...`);
+        const sheetTab = settings.googleSheetTab || 'Sales';
+        
+        // Ensure headers exist on first use
+        await ensureSheetHeaders(settings.googleSheetId, sheetTab);
+        
+        const sheetResult = await addSaleToGoogleSheet(submission, settings.googleSheetId, sheetTab);
+        if (sheetResult.success) {
+          console.log(`[Google Sheets] Successfully added sale to sheet`);
+          webhookSuccess = true;
         } else {
-          console.error(`[MCP] Failed to add to Dispatch.me: ${mcpResult.message}`);
+          console.error(`[Google Sheets] Failed to add sale: ${sheetResult.message}`);
+          webhookErrors.push(`Google Sheets: ${sheetResult.message}`);
         }
       }
       
