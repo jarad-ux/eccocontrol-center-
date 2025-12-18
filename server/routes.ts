@@ -127,7 +127,13 @@ export async function registerRoutes(
 
   app.post("/api/sales", isAuthenticated, async (req: any, res: Response) => {
     try {
-      const data = insertSalesSubmissionSchema.parse(req.body);
+      // Convert date strings to Date objects before validation
+      const body = { ...req.body };
+      if (body.installationDate && typeof body.installationDate === 'string') {
+        body.installationDate = new Date(body.installationDate);
+      }
+      
+      const data = insertSalesSubmissionSchema.parse(body);
       const submission = await storage.createSalesSubmission(data);
       
       const settings = await storage.getSettings();
