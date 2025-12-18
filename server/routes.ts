@@ -267,6 +267,139 @@ export async function registerRoutes(
     }
   });
 
+  // Retell AI Call Center Data
+  app.get("/api/call-center/calls", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const settings = await storage.getSettings();
+      
+      if (!settings?.retellApiKey) {
+        res.status(400).json({ message: "Retell API key not configured" });
+        return;
+      }
+
+      const { limit = 100, agent_id } = req.query;
+      
+      // Build request body for list calls
+      const requestBody: any = {};
+      
+      // Filter by agent ID if provided or use the one from settings
+      const agentId = agent_id || settings.retellAgentId;
+      if (agentId) {
+        requestBody.filter_criteria = {
+          agent_id: [agentId]
+        };
+      }
+      
+      if (limit) {
+        requestBody.limit = parseInt(limit as string, 10);
+      }
+
+      const response = await fetch('https://api.retellai.com/v2/list-calls', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.retellApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Retell API error: ${response.status} - ${errorText}`);
+        res.status(response.status).json({ message: `Retell API error: ${response.status}` });
+        return;
+      }
+
+      const responseData = await response.json();
+      // Retell API returns { data: Call[], pagination_key?: string }
+      const calls = Array.isArray(responseData) ? responseData : (responseData.data || responseData);
+      res.json(calls);
+    } catch (error: any) {
+      console.error("Error fetching Retell calls:", error.message);
+      res.status(500).json({ message: "Failed to fetch call center data" });
+    }
+  });
+
+  app.get("/api/call-center/stats", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const settings = await storage.getSettings();
+      
+      if (!settings?.retellApiKey) {
+        res.json({ configured: false, message: "Retell API not configured" });
+        return;
+      }
+
+      const agentId = settings.retellAgentId;
+      
+      // Fetch recent calls
+      const requestBody: any = { limit: 100 };
+      if (agentId) {
+        requestBody.filter_criteria = { agent_id: [agentId] };
+      }
+
+      const response = await fetch('https://api.retellai.com/v2/list-calls', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.retellApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        console.error(`Retell API error: ${response.status}`);
+        res.json({ configured: true, error: true, message: "Failed to fetch from Retell API" });
+        return;
+      }
+
+      const responseData = await response.json();
+      // Retell API returns { data: Call[], pagination_key?: string }
+      const calls = Array.isArray(responseData) ? responseData : (responseData.data || []);
+      
+      // Calculate stats
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      
+      const totalCalls = calls.length;
+      const todayCalls = calls.filter((c: any) => 
+        c.start_timestamp && new Date(c.start_timestamp) >= today
+      ).length;
+      const weekCalls = calls.filter((c: any) => 
+        c.start_timestamp && new Date(c.start_timestamp) >= weekStart
+      ).length;
+      
+      // Calculate average call duration
+      const callsWithDuration = calls.filter((c: any) => c.end_timestamp && c.start_timestamp);
+      const totalDuration = callsWithDuration.reduce((sum: number, c: any) => {
+        const duration = (new Date(c.end_timestamp).getTime() - new Date(c.start_timestamp).getTime()) / 1000;
+        return sum + duration;
+      }, 0);
+      const avgDuration = callsWithDuration.length > 0 ? totalDuration / callsWithDuration.length : 0;
+      
+      // Count by status
+      const connectedCalls = calls.filter((c: any) => c.call_status === 'ended').length;
+      const failedCalls = calls.filter((c: any) => 
+        c.call_status === 'error' || c.disconnection_reason === 'dial_failed'
+      ).length;
+
+      res.json({
+        configured: true,
+        totalCalls,
+        todayCalls,
+        weekCalls,
+        avgDurationSeconds: Math.round(avgDuration),
+        connectedCalls,
+        failedCalls,
+        successRate: totalCalls > 0 ? Math.round((connectedCalls / totalCalls) * 100) : 0,
+      });
+    } catch (error: any) {
+      console.error("Error fetching Retell stats:", error.message);
+      res.status(500).json({ message: "Failed to fetch call center stats" });
+    }
+  });
+
   app.get("/api/stats", isAuthenticated, async (req: any, res: Response) => {
     try {
       const { division } = req.query;
