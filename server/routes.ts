@@ -127,13 +127,21 @@ export async function registerRoutes(
 
   app.post("/api/sales", isAuthenticated, async (req: any, res: Response) => {
     try {
+      console.log("Creating sale, received body:", JSON.stringify(req.body, null, 2));
+      
       // Convert date strings to Date objects before validation
       const body = { ...req.body };
       if (body.installationDate && typeof body.installationDate === 'string') {
         body.installationDate = new Date(body.installationDate);
       }
       
-      const data = insertSalesSubmissionSchema.parse(body);
+      const parseResult = insertSalesSubmissionSchema.safeParse(body);
+      if (!parseResult.success) {
+        console.error("Validation errors:", parseResult.error.errors);
+        res.status(400).json({ message: "Validation error", errors: parseResult.error.errors });
+        return;
+      }
+      const data = parseResult.data;
       const submission = await storage.createSalesSubmission(data);
       
       const settings = await storage.getSettings();
