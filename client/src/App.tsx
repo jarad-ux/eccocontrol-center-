@@ -11,6 +11,7 @@ import Dashboard from "@/components/Dashboard";
 import SalesEntryForm from "@/components/SalesEntryForm";
 import SettingsPanel from "@/components/SettingsPanel";
 import LoginScreen from "@/components/LoginScreen";
+import Sales from "@/pages/Sales";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import type { SalesSubmission, SalesRep, AppSettings } from "@shared/schema";
@@ -192,6 +193,13 @@ function MainApp() {
                   onSubmit={handleSubmission}
                   onCancel={() => setCurrentView('dashboard')}
                   isSubmitting={createSaleMutation.isPending}
+                />
+              )}
+              
+              {currentView === 'sales' && (
+                <Sales
+                  userRole={userRole}
+                  userName={userName}
                 />
               )}
               

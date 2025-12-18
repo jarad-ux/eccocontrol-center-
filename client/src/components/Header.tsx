@@ -22,7 +22,7 @@ export default function Header({
   onLogout,
   sidebarTrigger
 }: HeaderProps) {
-  const navItems = ['dashboard', 'new-sale'];
+  const navItems = ['dashboard', 'sales', 'new-sale'];
   if (userRole === 'admin') navItems.push('settings');
 
   const getInitials = (name: string) => {
@@ -48,7 +48,7 @@ export default function Header({
             onClick={() => onNavigate(view)}
             data-testid={`nav-${view}`}
           >
-            {view === 'new-sale' ? 'New Sale' : view.charAt(0).toUpperCase() + view.slice(1)}
+            {view === 'new-sale' ? 'New Sale' : view === 'sales' ? 'Sales' : view.charAt(0).toUpperCase() + view.slice(1)}
           </Button>
         ))}
       </nav>

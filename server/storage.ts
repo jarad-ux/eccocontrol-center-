@@ -22,6 +22,7 @@ export interface IStorage {
   getSalesSubmissions(filters?: { division?: string; startDate?: Date; endDate?: Date }): Promise<SalesSubmission[]>;
   getSalesSubmission(id: string): Promise<SalesSubmission | undefined>;
   createSalesSubmission(data: InsertSalesSubmission): Promise<SalesSubmission>;
+  updateSalesSubmission(id: string, data: Partial<InsertSalesSubmission>): Promise<SalesSubmission | undefined>;
   updateSalesSubmissionStatus(id: string, status: string, syncedAt?: Date): Promise<SalesSubmission | undefined>;
 
   getSettings(): Promise<AppSettings | undefined>;
@@ -81,6 +82,11 @@ class DatabaseStorage implements IStorage {
 
   async createSalesSubmission(data: InsertSalesSubmission): Promise<SalesSubmission> {
     const [submission] = await db.insert(salesSubmissions).values(data).returning();
+    return submission;
+  }
+
+  async updateSalesSubmission(id: string, data: Partial<InsertSalesSubmission>): Promise<SalesSubmission | undefined> {
+    const [submission] = await db.update(salesSubmissions).set(data).where(eq(salesSubmissions.id, id)).returning();
     return submission;
   }
 

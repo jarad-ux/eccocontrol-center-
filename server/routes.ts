@@ -137,18 +137,65 @@ export async function registerRoutes(
       const submission = await storage.createSalesSubmission(data);
       
       const settings = await storage.getSettings();
+      let webhookSuccess = false;
+      const webhookErrors: string[] = [];
+      
+      // Send to primary webhook (Zapier/Make)
       if (settings?.webhookUrl) {
         try {
-          await fetch(settings.webhookUrl, {
+          console.log(`Sending to primary webhook: ${settings.webhookUrl}`);
+          const response = await fetch(settings.webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(submission),
           });
-          await storage.updateSalesSubmissionStatus(submission.id, 'synced', new Date());
-        } catch (webhookError) {
-          console.error("Webhook failed:", webhookError);
-          await storage.updateSalesSubmissionStatus(submission.id, 'error');
+          if (response.ok) {
+            console.log(`Primary webhook succeeded: ${response.status}`);
+            webhookSuccess = true;
+          } else {
+            const errorText = await response.text();
+            console.error(`Primary webhook failed: ${response.status} - ${errorText}`);
+            webhookErrors.push(`Primary webhook: ${response.status}`);
+          }
+        } catch (webhookError: any) {
+          console.error("Primary webhook error:", webhookError.message);
+          webhookErrors.push(`Primary webhook: ${webhookError.message}`);
         }
+      }
+      
+      // Send to Lindy.ai webhook if configured
+      if (settings?.lindyWebhookUrl) {
+        try {
+          console.log(`Sending to Lindy webhook: ${settings.lindyWebhookUrl}`);
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (settings.lindyApiKey) {
+            headers['Authorization'] = `Bearer ${settings.lindyApiKey}`;
+          }
+          const response = await fetch(settings.lindyWebhookUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(submission),
+          });
+          if (response.ok) {
+            console.log(`Lindy webhook succeeded: ${response.status}`);
+            webhookSuccess = true;
+          } else {
+            const errorText = await response.text();
+            console.error(`Lindy webhook failed: ${response.status} - ${errorText}`);
+            webhookErrors.push(`Lindy webhook: ${response.status}`);
+          }
+        } catch (webhookError: any) {
+          console.error("Lindy webhook error:", webhookError.message);
+          webhookErrors.push(`Lindy webhook: ${webhookError.message}`);
+        }
+      }
+      
+      // Update status based on webhook results
+      if (webhookSuccess) {
+        await storage.updateSalesSubmissionStatus(submission.id, 'synced', new Date());
+      } else if (webhookErrors.length > 0) {
+        await storage.updateSalesSubmissionStatus(submission.id, 'error');
+        console.error("All webhooks failed:", webhookErrors);
       }
 
       res.status(201).json(submission);
@@ -159,6 +206,35 @@ export async function registerRoutes(
       }
       console.error("Error creating sale:", error);
       res.status(500).json({ message: "Failed to create sale" });
+    }
+  });
+
+  app.patch("/api/sales/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Convert date strings to Date objects before validation
+      const body = { ...req.body };
+      if (body.installationDate && typeof body.installationDate === 'string') {
+        body.installationDate = new Date(body.installationDate);
+      }
+      
+      const data = insertSalesSubmissionSchema.partial().parse(body);
+      const submission = await storage.updateSalesSubmission(id, data);
+      
+      if (!submission) {
+        res.status(404).json({ message: "Sale not found" });
+        return;
+      }
+      
+      res.json(submission);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+        return;
+      }
+      console.error("Error updating sale:", error);
+      res.status(500).json({ message: "Failed to update sale" });
     }
   });
 
