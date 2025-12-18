@@ -48,13 +48,14 @@ function MainApp() {
     webhookUrl: '',
     googleSheetId: '',
     googleSheetTab: 'Sales',
-    lidyWebhookUrl: '',
-    lidyApiKey: '',
+    lindyWebhookUrl: '',
+    lindyApiKey: '',
     retellApiKey: '',
     retellAgentId: '',
     resendApiKey: '',
     resendFromEmail: '',
-    resendToEmail: ''
+    resendToEmail: '',
+    claudeApiKey: ''
   }, refetch: refetchSettings } = useQuery<Partial<AppSettings>>({
     queryKey: ['/api/settings'],
     enabled: isAuthenticated,
@@ -200,13 +201,14 @@ function MainApp() {
                     webhookUrl: settings.webhookUrl || '',
                     googleSheetId: settings.googleSheetId || '',
                     googleSheetTab: settings.googleSheetTab || 'Sales',
-                    lidyWebhookUrl: settings.lidyWebhookUrl || '',
-                    lidyApiKey: settings.lidyApiKey || '',
+                    lindyWebhookUrl: settings.lindyWebhookUrl || '',
+                    lindyApiKey: settings.lindyApiKey || '',
                     retellApiKey: settings.retellApiKey || '',
                     retellAgentId: settings.retellAgentId || '',
                     resendApiKey: settings.resendApiKey || '',
                     resendFromEmail: settings.resendFromEmail || '',
                     resendToEmail: settings.resendToEmail || '',
+                    claudeApiKey: settings.claudeApiKey || '',
                   }}
                   onSave={handleSaveSettings}
                   onBack={() => setCurrentView('dashboard')}

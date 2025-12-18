@@ -10,13 +10,14 @@ interface Settings {
   webhookUrl: string;
   googleSheetId: string;
   googleSheetTab: string;
-  lidyWebhookUrl: string;
-  lidyApiKey: string;
+  lindyWebhookUrl: string;
+  lindyApiKey: string;
   retellApiKey: string;
   retellAgentId: string;
   resendApiKey: string;
   resendFromEmail: string;
   resendToEmail: string;
+  claudeApiKey: string;
 }
 
 interface SettingsPanelProps {
@@ -138,32 +139,32 @@ export default function SettingsPanel({ settings, onSave, onBack, isSaving = fal
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div>
-              <CardTitle className="text-base">Lidy.ai Integration</CardTitle>
-              <CardDescription>AI-powered lead processing and enrichment</CardDescription>
+              <CardTitle className="text-base">Lindy.ai Integration</CardTitle>
+              <CardDescription>AI-powered automation and workflows</CardDescription>
             </div>
-            {getConnectionStatus(formData.lidyApiKey)}
+            {getConnectionStatus(formData.lindyApiKey)}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="lidyWebhookUrl">Webhook URL</Label>
+                <Label htmlFor="lindyWebhookUrl">Webhook URL</Label>
                 <Input
-                  id="lidyWebhookUrl"
-                  value={formData.lidyWebhookUrl}
-                  onChange={(e) => handleChange('lidyWebhookUrl', e.target.value)}
-                  placeholder="https://api.lidy.ai/..."
-                  data-testid="input-lidy-webhook-url"
+                  id="lindyWebhookUrl"
+                  value={formData.lindyWebhookUrl}
+                  onChange={(e) => handleChange('lindyWebhookUrl', e.target.value)}
+                  placeholder="https://api.lindy.ai/..."
+                  data-testid="input-lindy-webhook-url"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lidyApiKey">API Key</Label>
+                <Label htmlFor="lindyApiKey">API Key</Label>
                 <Input
-                  id="lidyApiKey"
+                  id="lindyApiKey"
                   type="password"
-                  value={formData.lidyApiKey}
-                  onChange={(e) => handleChange('lidyApiKey', e.target.value)}
+                  value={formData.lindyApiKey}
+                  onChange={(e) => handleChange('lindyApiKey', e.target.value)}
                   placeholder="Enter API key"
-                  data-testid="input-lidy-api-key"
+                  data-testid="input-lindy-api-key"
                 />
               </div>
             </div>
@@ -248,6 +249,29 @@ export default function SettingsPanel({ settings, onSave, onBack, isSaving = fal
                   data-testid="input-resend-to-email"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">Claude API (Anthropic)</CardTitle>
+              <CardDescription>AI assistant for advanced automation</CardDescription>
+            </div>
+            {getConnectionStatus(formData.claudeApiKey)}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="claudeApiKey">API Key</Label>
+              <Input
+                id="claudeApiKey"
+                type="password"
+                value={formData.claudeApiKey}
+                onChange={(e) => handleChange('claudeApiKey', e.target.value)}
+                placeholder="sk-ant-..."
+                data-testid="input-claude-api-key"
+              />
             </div>
           </CardContent>
         </Card>

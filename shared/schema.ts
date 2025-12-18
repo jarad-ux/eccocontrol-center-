@@ -95,14 +95,14 @@ export const salesSubmissions = pgTable("sales_submissions", {
 // App Settings (per-organization settings)
 export const appSettings = pgTable("app_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  // Primary Webhook
+  // Primary Webhook (Zapier/Make)
   webhookUrl: text("webhook_url"),
   // Google Sheets
   googleSheetId: text("google_sheet_id"),
   googleSheetTab: text("google_sheet_tab").default('Sales'),
-  // Lidy.ai
-  lidyWebhookUrl: text("lidy_webhook_url"),
-  lidyApiKey: text("lidy_api_key"),
+  // Lindy.ai
+  lindyWebhookUrl: text("lindy_webhook_url"),
+  lindyApiKey: text("lindy_api_key"),
   // Retell AI
   retellApiKey: text("retell_api_key"),
   retellAgentId: text("retell_agent_id"),
@@ -110,6 +110,8 @@ export const appSettings = pgTable("app_settings", {
   resendApiKey: text("resend_api_key"),
   resendFromEmail: text("resend_from_email"),
   resendToEmail: text("resend_to_email"),
+  // Claude API (Anthropic)
+  claudeApiKey: text("claude_api_key"),
   // Metadata
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: varchar("updated_by"),
