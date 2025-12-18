@@ -1,7 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatCard from "./StatCard";
 import SalesTable from "./SalesTable";
-import { Plus, TrendingUp, DollarSign, UserPlus, Calendar } from "lucide-react";
+import { Plus, TrendingUp, DollarSign, UserPlus, Calendar, ExternalLink } from "lucide-react";
+
+const QUICK_LINKS = [
+  { label: "Payroll", url: "https://goecopayroll.com", description: "Go Ecco Payroll" },
+  { label: "Call Center", url: "https://goecollc.com", description: "Go Ecco LLC" },
+  { label: "Assessment & Rebate", url: "https://eccoclimatecontrol.com", description: "Climate Control Portal" },
+  { label: "Onboarding", url: "https://ecoonboarding.com", description: "Employee Onboarding" },
+];
 
 // todo: remove mock data - this will come from API
 const EQUIPMENT_TYPES = [
@@ -92,6 +100,33 @@ export default function Dashboard({ submissions, onNewSale, userName, userRole }
           />
         ))}
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Quick Links</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {QUICK_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid={`link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  <ExternalLink className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{link.label}</span>
+                </Button>
+              </a>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <SalesTable 
         submissions={userSubmissions.slice(0, 10)} 
