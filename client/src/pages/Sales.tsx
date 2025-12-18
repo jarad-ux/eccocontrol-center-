@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, RefreshCw, Loader2, Check, X } from "lucide-react";
+import { Search, RefreshCw, Loader2, Check, X, FileSpreadsheet } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type SalesSubmission } from "@shared/schema";
@@ -73,6 +73,24 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/sales/export-sheets');
+      return response.json();
+    },
+    onSuccess: (data: { exported: number; failed: number; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sales'] });
+      if (data.exported > 0) {
+        toast({ title: "Exported", description: `${data.exported} sales exported to Google Sheets.` });
+      } else {
+        toast({ title: "Export", description: data.message, variant: "destructive" });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -246,6 +264,20 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
               data-testid="input-search-sales"
             />
           </div>
+          <Button 
+            onClick={() => exportMutation.mutate()} 
+            variant="outline" 
+            size="sm" 
+            disabled={exportMutation.isPending}
+            data-testid="button-export-sheets"
+          >
+            {exportMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            <span className="ml-1">Export</span>
+          </Button>
           <Button onClick={() => refetch()} variant="outline" size="sm" data-testid="button-refresh-sales">
             <RefreshCw className="h-4 w-4" />
           </Button>

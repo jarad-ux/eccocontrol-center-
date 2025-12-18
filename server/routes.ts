@@ -250,6 +250,62 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/sales/export-sheets", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const settings = await storage.getSettings();
+      
+      if (!settings?.googleSheetId) {
+        res.status(400).json({ 
+          exported: 0, 
+          failed: 0, 
+          message: "Google Sheet not configured. Please add Sheet ID in Settings." 
+        });
+        return;
+      }
+      
+      const sales = await storage.getSalesSubmissions({});
+      const pendingOrErrorSales = sales.filter(s => s.status === 'pending' || s.status === 'error');
+      
+      if (pendingOrErrorSales.length === 0) {
+        res.json({ 
+          exported: 0, 
+          failed: 0, 
+          message: "No pending sales to export. All sales are already synced." 
+        });
+        return;
+      }
+      
+      const sheetTab = settings.googleSheetTab || 'Sales';
+      await ensureSheetHeaders(settings.googleSheetId, sheetTab);
+      
+      let exported = 0;
+      let failed = 0;
+      
+      for (const sale of pendingOrErrorSales) {
+        const result = await addSaleToGoogleSheet(sale, settings.googleSheetId, sheetTab);
+        if (result.success) {
+          await storage.updateSalesSubmissionStatus(sale.id, 'synced', new Date());
+          exported++;
+        } else {
+          failed++;
+        }
+      }
+      
+      res.json({ 
+        exported, 
+        failed, 
+        message: exported > 0 ? `Exported ${exported} sales` : `Export failed for ${failed} sales` 
+      });
+    } catch (error: any) {
+      console.error("Error exporting to Google Sheets:", error);
+      res.status(500).json({ 
+        exported: 0, 
+        failed: 0, 
+        message: error.message || "Failed to export to Google Sheets" 
+      });
+    }
+  });
+
   app.patch("/api/sales/:id", isAuthenticated, async (req: any, res: Response) => {
     try {
       const { id } = req.params;
