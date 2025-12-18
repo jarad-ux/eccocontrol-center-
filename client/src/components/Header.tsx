@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut } from "lucide-react";
+import { LogOut, LayoutDashboard, FileText, PlusCircle, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface HeaderProps {
@@ -13,6 +13,13 @@ interface HeaderProps {
   sidebarTrigger?: ReactNode;
 }
 
+const navConfig = {
+  dashboard: { label: 'Dashboard', icon: LayoutDashboard },
+  sales: { label: 'Sales', icon: FileText },
+  'new-sale': { label: 'New Sale', icon: PlusCircle },
+  settings: { label: 'Settings', icon: Settings },
+};
+
 export default function Header({ 
   userName, 
   userRole, 
@@ -22,7 +29,7 @@ export default function Header({
   onLogout,
   sidebarTrigger
 }: HeaderProps) {
-  const navItems = ['dashboard', 'sales', 'new-sale'];
+  const navItems: (keyof typeof navConfig)[] = ['dashboard', 'sales', 'new-sale'];
   if (userRole === 'admin') navItems.push('settings');
 
   const getInitials = (name: string) => {
@@ -39,18 +46,25 @@ export default function Header({
         </div>
       </div>
 
-      <nav className="flex gap-1">
-        {navItems.map(view => (
-          <Button
-            key={view}
-            variant={currentView === view ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => onNavigate(view)}
-            data-testid={`nav-${view}`}
-          >
-            {view === 'new-sale' ? 'New Sale' : view === 'sales' ? 'Sales' : view.charAt(0).toUpperCase() + view.slice(1)}
-          </Button>
-        ))}
+      <nav className="flex gap-1 bg-muted/50 p-1 rounded-lg">
+        {navItems.map(view => {
+          const config = navConfig[view];
+          const Icon = config.icon;
+          const isActive = currentView === view;
+          return (
+            <Button
+              key={view}
+              variant={isActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onNavigate(view)}
+              data-testid={`nav-${view}`}
+              className={isActive ? "" : "text-muted-foreground"}
+            >
+              <Icon className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">{config.label}</span>
+            </Button>
+          );
+        })}
       </nav>
 
       <div className="flex items-center gap-4">
