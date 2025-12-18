@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface HeaderProps {
   userName: string;
@@ -9,6 +10,7 @@ interface HeaderProps {
   currentView: string;
   onNavigate: (view: string) => void;
   onLogout: () => void;
+  sidebarTrigger?: ReactNode;
 }
 
 export default function Header({ 
@@ -17,7 +19,8 @@ export default function Header({
   userImage,
   currentView, 
   onNavigate, 
-  onLogout 
+  onLogout,
+  sidebarTrigger
 }: HeaderProps) {
   const navItems = ['dashboard', 'new-sale'];
   if (userRole === 'admin') navItems.push('settings');
@@ -27,13 +30,11 @@ export default function Header({
   };
 
   return (
-    <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border bg-background" data-testid="header">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary text-primary-foreground font-bold text-sm">
-          GE
-        </div>
-        <div className="hidden sm:block">
-          <div className="text-base font-semibold text-foreground">Go Ecco Climate Control</div>
+    <header className="flex items-center justify-between gap-4 px-4 py-3 border-b border-border bg-background" data-testid="header">
+      <div className="flex items-center gap-3">
+        {sidebarTrigger}
+        <div className="hidden md:block">
+          <div className="text-sm font-semibold text-foreground">Go Ecco Climate Control</div>
           <div className="text-xs text-muted-foreground">Field Sales System</div>
         </div>
       </div>

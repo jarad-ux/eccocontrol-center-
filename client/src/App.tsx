@@ -4,12 +4,14 @@ import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Dashboard from "@/components/Dashboard";
 import SalesEntryForm from "@/components/SalesEntryForm";
 import SettingsPanel from "@/components/SettingsPanel";
 import LoginScreen from "@/components/LoginScreen";
+import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import type { SalesSubmission, SalesRep, AppSettings } from "@shared/schema";
 
@@ -152,57 +154,70 @@ function MainApp() {
     status: (s.status || 'pending') as 'pending' | 'synced' | 'error',
   }));
 
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <Header
-        userName={userName}
-        userRole={userRole}
-        userImage={user?.profileImageUrl || undefined}
-        currentView={currentView}
-        onNavigate={setCurrentView}
-        onLogout={handleLogout}
-      />
-      
-      <main className="p-6 max-w-7xl mx-auto">
-        {currentView === 'dashboard' && (
-          <Dashboard
-            submissions={mappedSubmissions}
-            onNewSale={() => setCurrentView('new-sale')}
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1">
+          <Header
             userName={userName}
             userRole={userRole}
+            userImage={user?.profileImageUrl || undefined}
+            currentView={currentView}
+            onNavigate={setCurrentView}
+            onLogout={handleLogout}
+            sidebarTrigger={<SidebarTrigger data-testid="button-sidebar-toggle" />}
           />
-        )}
-        
-        {currentView === 'new-sale' && (
-          <SalesEntryForm
-            userDivision={userDivision}
-            onSubmit={handleSubmission}
-            onCancel={() => setCurrentView('dashboard')}
-            isSubmitting={createSaleMutation.isPending}
-          />
-        )}
-        
-        {currentView === 'settings' && (
-          <SettingsPanel
-            settings={{
-              webhookUrl: settings.webhookUrl || '',
-              googleSheetId: settings.googleSheetId || '',
-              googleSheetTab: settings.googleSheetTab || 'Sales',
-              lidyWebhookUrl: settings.lidyWebhookUrl || '',
-              lidyApiKey: settings.lidyApiKey || '',
-              retellApiKey: settings.retellApiKey || '',
-              retellAgentId: settings.retellAgentId || '',
-              resendApiKey: settings.resendApiKey || '',
-              resendFromEmail: settings.resendFromEmail || '',
-              resendToEmail: settings.resendToEmail || '',
-            }}
-            onSave={handleSaveSettings}
-            onBack={() => setCurrentView('dashboard')}
-            isSaving={updateSettingsMutation.isPending}
-          />
-        )}
-      </main>
-    </div>
+          
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              {currentView === 'dashboard' && (
+                <Dashboard
+                  submissions={mappedSubmissions}
+                  onNewSale={() => setCurrentView('new-sale')}
+                  userName={userName}
+                  userRole={userRole}
+                />
+              )}
+              
+              {currentView === 'new-sale' && (
+                <SalesEntryForm
+                  userDivision={userDivision}
+                  onSubmit={handleSubmission}
+                  onCancel={() => setCurrentView('dashboard')}
+                  isSubmitting={createSaleMutation.isPending}
+                />
+              )}
+              
+              {currentView === 'settings' && (
+                <SettingsPanel
+                  settings={{
+                    webhookUrl: settings.webhookUrl || '',
+                    googleSheetId: settings.googleSheetId || '',
+                    googleSheetTab: settings.googleSheetTab || 'Sales',
+                    lidyWebhookUrl: settings.lidyWebhookUrl || '',
+                    lidyApiKey: settings.lidyApiKey || '',
+                    retellApiKey: settings.retellApiKey || '',
+                    retellAgentId: settings.retellAgentId || '',
+                    resendApiKey: settings.resendApiKey || '',
+                    resendFromEmail: settings.resendFromEmail || '',
+                    resendToEmail: settings.resendToEmail || '',
+                  }}
+                  onSave={handleSaveSettings}
+                  onBack={() => setCurrentView('dashboard')}
+                  isSaving={updateSettingsMutation.isPending}
+                />
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 
