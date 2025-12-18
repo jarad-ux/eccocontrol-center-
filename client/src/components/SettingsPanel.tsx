@@ -310,6 +310,27 @@ export default function SettingsPanel({ settings, onSave, onBack, isSaving = fal
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="text-base">Zapier MCP Integration</CardTitle>
+              <CardDescription>Connect Zapier automations to your AI workflows</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="w-full rounded-md overflow-hidden border border-border"
+              data-testid="zapier-mcp-embed-container"
+            >
+              <zapier-mcp
+                embed-id="f0733b87-3f4a-444f-8746-e38eeb36b9dd"
+                width="100%"
+                height="500px"
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

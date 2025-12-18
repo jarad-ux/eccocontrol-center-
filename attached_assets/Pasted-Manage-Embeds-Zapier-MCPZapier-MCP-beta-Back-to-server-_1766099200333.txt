@@ -1,0 +1,95 @@
+Manage Embeds - Zapier MCPZapier MCP
+beta
+Back to server list
+Manage embeds
+About embeds
+Embed configuration
+Secret management
+Get embed code
+Connect your agent
+
+Support
+
+JD
+Jarad Derochey
+Get embed code
+Generate embed code snippets for integrating Zapier MCP into your application.
+
+Select your framework
+
+HTML
+HTML
+The Zapier MCP custom element can be used directly in HTML. Add the script to the <head> and use the <zapier-mcp> element.
+
+Head
+
+<script src="https://mcp.zapier.com/embed/v1/mcp.js"></script>
+Body
+
+<zapier-mcp
+  embed-id="f0733b87-3f4a-444f-8746-e38eeb36b9dd"
+  width="100%"
+  height="600px"
+  sign-up-email="email_of_your_user@example.com"
+  sign-up-first-name="first_name_of_your_user"
+  sign-up-last-name="last_name_of_your_user"
+></zapier-mcp>
+
+<script>
+  document.querySelector('zapier-mcp').addEventListener('mcp-server-url', (event) => {
+    // this is the URL of the MCP server for a specific user
+    console.log('MCP Server URL:', event.detail.serverUrl);
+  });
+
+  document.querySelector('zapier-mcp').addEventListener('tools-changed', (event) => {
+    // this is sent whenever a user adds/removes tools from their MCP server
+    console.log('Tools changed');
+  });
+
+  document.querySelector('zapier-mcp').addEventListener('close-requested', (event) => {
+    // this is sent when the user clicks the close button in the embed
+    console.log('Close requested');
+  });
+</script>
+Available attributes
+The <zapier-mcp> custom element supports the following attributes:
+
+embed-id(required)
+The unique identifier for your embed: f0733b87-3f4a-444f-8746-e38eeb36b9dd
+
+width
+Width of the embed (default: "100%")
+
+height
+Height of the embed (default: "600px")
+
+class-name
+CSS class to apply to the iframe
+
+Enable Quick Account Creation for your users (optional)
+To enable Quick Account Creation, provide your user's email, first name, and last name to Zapier MCP. This will bypass Zapier sign-up for your users.
+
+Note: All three fields need to be provided in order to enable Quick Account Creation.
+
+sign-up-email
+User's email address for quick account creation (optional)
+
+sign-up-first-name
+User's first name for quick account creation (optional)
+
+sign-up-last-name
+User's last name for quick account creation (optional)
+
+Event reference
+The <zapier-mcp> custom element dispatches the following DOM events:
+
+mcp-server-url
+Fired when an MCP server URL is received. event.detail.serverUrl contains the URL.
+
+tools-changed
+Fired when available tools change. Use a tools/list request from your MCP client to get the updated list of tools.
+
+close-requested
+Fired when the user requests to close the embed.
+
+
