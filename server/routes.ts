@@ -253,6 +253,7 @@ export async function registerRoutes(
   app.post("/api/sales/export-sheets", isAuthenticated, async (req: any, res: Response) => {
     try {
       const settings = await storage.getSettings();
+      const { saleIds } = req.body || {};
       
       if (!settings?.googleSheetId) {
         res.status(400).json({ 
@@ -263,14 +264,20 @@ export async function registerRoutes(
         return;
       }
       
-      const sales = await storage.getSalesSubmissions({});
-      const pendingOrErrorSales = sales.filter(s => s.status === 'pending' || s.status === 'error');
+      const allSales = await storage.getSalesSubmissions({});
       
-      if (pendingOrErrorSales.length === 0) {
+      let salesToExport: typeof allSales;
+      if (saleIds && Array.isArray(saleIds) && saleIds.length > 0) {
+        salesToExport = allSales.filter(s => saleIds.includes(s.id));
+      } else {
+        salesToExport = allSales.filter(s => s.status === 'pending' || s.status === 'error');
+      }
+      
+      if (salesToExport.length === 0) {
         res.json({ 
           exported: 0, 
           failed: 0, 
-          message: "No pending sales to export. All sales are already synced." 
+          message: saleIds ? "No matching sales found." : "No pending sales to export." 
         });
         return;
       }
@@ -281,7 +288,7 @@ export async function registerRoutes(
       let exported = 0;
       let failed = 0;
       
-      for (const sale of pendingOrErrorSales) {
+      for (const sale of salesToExport) {
         const result = await addSaleToGoogleSheet(sale, settings.googleSheetId, sheetTab);
         if (result.success) {
           await storage.updateSalesSubmissionStatus(sale.id, 'synced', new Date());

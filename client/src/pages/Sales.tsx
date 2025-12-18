@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, RefreshCw, Loader2, Check, X, FileSpreadsheet } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -56,6 +57,7 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: sales = [], isLoading, refetch } = useQuery<SalesSubmission[]>({
@@ -77,12 +79,13 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
   });
 
   const exportMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/sales/export-sheets');
+    mutationFn: async (ids?: string[]) => {
+      const response = await apiRequest('POST', '/api/sales/export-sheets', { saleIds: ids });
       return response.json();
     },
     onSuccess: (data: { exported: number; failed: number; message: string }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/sales'] });
+      setSelectedIds(new Set());
       if (data.exported > 0) {
         toast({ title: "Exported", description: `${data.exported} sales exported to Google Sheets.` });
       } else {
@@ -93,6 +96,26 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
       toast({ title: "Export Failed", description: error.message, variant: "destructive" });
     },
   });
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredSales.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSales.map(s => s.id)));
+    }
+  };
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -265,7 +288,7 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
             />
           </div>
           <Button 
-            onClick={() => exportMutation.mutate()} 
+            onClick={() => exportMutation.mutate(selectedIds.size > 0 ? Array.from(selectedIds) : undefined)} 
             variant="outline" 
             size="sm" 
             disabled={exportMutation.isPending}
@@ -276,7 +299,7 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
             ) : (
               <FileSpreadsheet className="h-4 w-4" />
             )}
-            <span className="ml-1">Export</span>
+            <span className="ml-1">{selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export All'}</span>
           </Button>
           <Button onClick={() => refetch()} variant="outline" size="sm" data-testid="button-refresh-sales">
             <RefreshCw className="h-4 w-4" />
@@ -297,6 +320,13 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
           <table className="w-max min-w-full border-collapse text-sm" data-testid="sales-spreadsheet">
             <thead className="sticky top-0 z-10 bg-muted">
               <tr>
+                <th className="border border-border px-2 py-1.5 text-xs font-semibold text-center bg-muted w-8">
+                  <Checkbox 
+                    checked={selectedIds.size === filteredSales.length && filteredSales.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    data-testid="checkbox-select-all"
+                  />
+                </th>
                 <th className="border border-border px-2 py-1.5 text-xs font-semibold text-left bg-muted w-8">#</th>
                 {columns.map(col => (
                   <th 
@@ -310,7 +340,14 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
             </thead>
             <tbody>
               {filteredSales.map((sale, index) => (
-                <tr key={sale.id} className="hover:bg-muted/30" data-testid={`row-sale-${sale.id}`}>
+                <tr key={sale.id} className={`hover:bg-muted/30 ${selectedIds.has(sale.id) ? 'bg-primary/5' : ''}`} data-testid={`row-sale-${sale.id}`}>
+                  <td className="border border-border px-2 py-1 text-center bg-muted/50 w-8">
+                    <Checkbox 
+                      checked={selectedIds.has(sale.id)}
+                      onCheckedChange={() => toggleSelect(sale.id)}
+                      data-testid={`checkbox-sale-${sale.id}`}
+                    />
+                  </td>
                   <td className="border border-border px-2 py-1 text-xs text-muted-foreground bg-muted/50 w-8">
                     {index + 1}
                   </td>
