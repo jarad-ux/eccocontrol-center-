@@ -49,13 +49,72 @@ async function getUncachableGoogleSheetClient() {
   return google.sheets({ version: 'v4', auth: oauth2Client });
 }
 
+async function getFirstSheetName(spreadsheetId: string): Promise<string> {
+  try {
+    const sheets = await getUncachableGoogleSheetClient();
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties.title',
+    });
+    
+    const sheetTitles = response.data.sheets?.map(s => s.properties?.title).filter(Boolean) || [];
+    console.log(`[Google Sheets] Available sheets: ${sheetTitles.join(', ')}`);
+    
+    if (sheetTitles.length > 0) {
+      return sheetTitles[0] as string;
+    }
+    return 'Sheet1';
+  } catch (error: any) {
+    console.error(`[Google Sheets] Error getting sheet names:`, error.message);
+    return 'Sheet1';
+  }
+}
+
+async function findOrCreateSheet(spreadsheetId: string, desiredName: string): Promise<string> {
+  try {
+    const sheets = await getUncachableGoogleSheetClient();
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties.title',
+    });
+    
+    const sheetTitles = response.data.sheets?.map(s => s.properties?.title).filter(Boolean) || [];
+    console.log(`[Google Sheets] Available sheets: ${sheetTitles.join(', ')}`);
+    
+    // Check if desired sheet exists
+    if (sheetTitles.includes(desiredName)) {
+      return desiredName;
+    }
+    
+    // If only one sheet and it's empty/default, rename it
+    if (sheetTitles.length === 1) {
+      const firstSheetName = sheetTitles[0] as string;
+      console.log(`[Google Sheets] Using existing sheet: ${firstSheetName}`);
+      return firstSheetName;
+    }
+    
+    // Use the first available sheet
+    if (sheetTitles.length > 0) {
+      console.log(`[Google Sheets] Desired sheet "${desiredName}" not found, using: ${sheetTitles[0]}`);
+      return sheetTitles[0] as string;
+    }
+    
+    return 'Sheet1';
+  } catch (error: any) {
+    console.error(`[Google Sheets] Error finding sheet:`, error.message);
+    return 'Sheet1';
+  }
+}
+
 export async function addSaleToGoogleSheet(
   sale: SalesSubmission,
   spreadsheetId: string,
   sheetTab: string = 'Sales'
 ): Promise<{ success: boolean; message: string }> {
   try {
-    console.log(`[Google Sheets] Adding sale to sheet: ${spreadsheetId}, tab: ${sheetTab}`);
+    // Find the actual sheet name to use
+    const actualSheetName = await findOrCreateSheet(spreadsheetId, sheetTab);
+    console.log(`[Google Sheets] Adding sale to sheet: ${spreadsheetId}, tab: ${actualSheetName}`);
     
     const sheets = await getUncachableGoogleSheetClient();
     
@@ -88,7 +147,7 @@ export async function addSaleToGoogleSheet(
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetTab}!A:S`,
+      range: `'${actualSheetName}'!A:S`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [rowData],
@@ -106,13 +165,16 @@ export async function addSaleToGoogleSheet(
 export async function ensureSheetHeaders(
   spreadsheetId: string,
   sheetTab: string = 'Sales'
-): Promise<void> {
+): Promise<string> {
   try {
+    // Find the actual sheet name to use
+    const actualSheetName = await findOrCreateSheet(spreadsheetId, sheetTab);
+    
     const sheets = await getUncachableGoogleSheetClient();
     
     const existingData = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetTab}!A1:S1`,
+      range: `'${actualSheetName}'!A1:S1`,
     });
 
     if (!existingData.data.values || existingData.data.values.length === 0) {
@@ -140,16 +202,19 @@ export async function ensureSheetHeaders(
 
       await sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: `${sheetTab}!A1:S1`,
+        range: `'${actualSheetName}'!A1:S1`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [headers],
         },
       });
       
-      console.log(`[Google Sheets] Added headers to sheet`);
+      console.log(`[Google Sheets] Added headers to sheet: ${actualSheetName}`);
     }
+    
+    return actualSheetName;
   } catch (error: any) {
     console.error(`[Google Sheets] Error ensuring headers:`, error.message);
+    return sheetTab;
   }
 }
