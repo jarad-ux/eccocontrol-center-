@@ -198,6 +198,7 @@ function MainApp() {
             }}
             onSave={handleSaveSettings}
             onBack={() => setCurrentView('dashboard')}
+            isSaving={updateSettingsMutation.isPending}
           />
         )}
       </main>
