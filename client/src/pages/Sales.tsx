@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -316,10 +316,10 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
                     }
 
                     if (col.select && col.options) {
-                      return renderSelectCell(sale, field, displayValue, col.options, col.width);
+                      return <Fragment key={col.key}>{renderSelectCell(sale, field, displayValue, col.options, col.width)}</Fragment>;
                     }
 
-                    return renderCell(sale, field, (sale[field] as string) || '', col.width);
+                    return <Fragment key={col.key}>{renderCell(sale, field, (sale[field] as string) || '', col.width)}</Fragment>;
                   })}
                 </tr>
               ))}
