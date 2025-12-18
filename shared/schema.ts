@@ -112,6 +112,9 @@ export const appSettings = pgTable("app_settings", {
   resendToEmail: text("resend_to_email"),
   // Claude API (Anthropic)
   claudeApiKey: text("claude_api_key"),
+  // Anthropic MCP Server
+  mcpServerUrl: text("mcp_server_url"),
+  mcpApiKey: text("mcp_api_key"),
   // Metadata
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: varchar("updated_by"),

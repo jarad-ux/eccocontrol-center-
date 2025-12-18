@@ -56,7 +56,9 @@ function MainApp() {
     resendApiKey: '',
     resendFromEmail: '',
     resendToEmail: '',
-    claudeApiKey: ''
+    claudeApiKey: '',
+    mcpServerUrl: '',
+    mcpApiKey: ''
   }, refetch: refetchSettings } = useQuery<Partial<AppSettings>>({
     queryKey: ['/api/settings'],
     enabled: isAuthenticated,
@@ -217,6 +219,8 @@ function MainApp() {
                     resendFromEmail: settings.resendFromEmail || '',
                     resendToEmail: settings.resendToEmail || '',
                     claudeApiKey: settings.claudeApiKey || '',
+                    mcpServerUrl: settings.mcpServerUrl || '',
+                    mcpApiKey: settings.mcpApiKey || '',
                   }}
                   onSave={handleSaveSettings}
                   onBack={() => setCurrentView('dashboard')}

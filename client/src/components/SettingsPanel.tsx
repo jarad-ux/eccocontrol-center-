@@ -18,6 +18,8 @@ interface Settings {
   resendFromEmail: string;
   resendToEmail: string;
   claudeApiKey: string;
+  mcpServerUrl: string;
+  mcpApiKey: string;
 }
 
 interface SettingsPanelProps {
@@ -271,6 +273,39 @@ export default function SettingsPanel({ settings, onSave, onBack, isSaving = fal
                 onChange={(e) => handleChange('claudeApiKey', e.target.value)}
                 placeholder="sk-ant-..."
                 data-testid="input-claude-api-key"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">Anthropic MCP Server</CardTitle>
+              <CardDescription>Model Context Protocol server for AI tool connections</CardDescription>
+            </div>
+            {getConnectionStatus(formData.mcpServerUrl)}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="mcpServerUrl">MCP Server URL</Label>
+              <Input
+                id="mcpServerUrl"
+                value={formData.mcpServerUrl}
+                onChange={(e) => handleChange('mcpServerUrl', e.target.value)}
+                placeholder="https://mcp.example.com/..."
+                data-testid="input-mcp-server-url"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mcpApiKey">API Key</Label>
+              <Input
+                id="mcpApiKey"
+                type="password"
+                value={formData.mcpApiKey}
+                onChange={(e) => handleChange('mcpApiKey', e.target.value)}
+                placeholder="mcp-..."
+                data-testid="input-mcp-api-key"
               />
             </div>
           </CardContent>
