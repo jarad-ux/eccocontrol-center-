@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "./lib/queryClient";
+import { QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -11,75 +11,38 @@ import SalesEntryForm from "@/components/SalesEntryForm";
 import SettingsPanel from "@/components/SettingsPanel";
 import LoginScreen from "@/components/LoginScreen";
 import { useAuth } from "@/hooks/use-auth";
+import type { SalesSubmission, SalesRep, AppSettings } from "@shared/schema";
 
-// todo: remove mock data - will come from API
-interface SalesSubmission {
-  id: string;
-  customerFirstName: string;
-  customerLastName: string;
-  customerCity: string;
-  customerState: string;
-  equipmentType: string;
-  saleAmount: string;
-  division: string;
-  leadSource: string;
-  submittedByName: string;
-  submittedAt: Date;
-  status: 'pending' | 'synced' | 'error';
+interface SalesStats {
+  totalSales: number;
+  totalRevenue: number;
+  todaySales: number;
+  todayRevenue: number;
+  weekSales: number;
+  weekRevenue: number;
+  monthSales: number;
+  monthRevenue: number;
+  pendingSync: number;
+  syncedCount: number;
+  errorCount: number;
 }
 
-// todo: remove mock data
-const MOCK_SUBMISSIONS: SalesSubmission[] = [
-  {
-    id: '1',
-    customerFirstName: 'John',
-    customerLastName: 'Smith',
-    customerCity: 'Las Vegas',
-    customerState: 'NV',
-    equipmentType: 'central_air',
-    saleAmount: '8500',
-    division: 'NV',
-    leadSource: 'lead',
-    submittedByName: 'Joey Majors',
-    submittedAt: new Date(),
-    status: 'synced'
-  },
-  {
-    id: '2',
-    customerFirstName: 'Sarah',
-    customerLastName: 'Johnson',
-    customerCity: 'Baltimore',
-    customerState: 'MD',
-    equipmentType: 'heat_pump',
-    saleAmount: '12500',
-    division: 'MD',
-    leadSource: 'self',
-    submittedByName: 'Demo Rep',
-    submittedAt: new Date(Date.now() - 86400000),
-    status: 'pending'
-  },
-  {
-    id: '3',
-    customerFirstName: 'Mike',
-    customerLastName: 'Williams',
-    customerCity: 'Atlanta',
-    customerState: 'GA',
-    equipmentType: 'gas_furnace',
-    saleAmount: '6800',
-    division: 'GA',
-    leadSource: 'lead',
-    submittedByName: 'Joey Majors',
-    submittedAt: new Date(Date.now() - 172800000),
-    status: 'synced'
-  }
-];
-
 function MainApp() {
-  const { user, isLoading, logout, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading, logout, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [currentView, setCurrentView] = useState('dashboard');
-  const [submissions, setSubmissions] = useState<SalesSubmission[]>(MOCK_SUBMISSIONS);
-  const [settings, setSettings] = useState({
+
+  const { data: salesRep } = useQuery<SalesRep | null>({
+    queryKey: ['/api/sales-reps/me'],
+    enabled: isAuthenticated,
+  });
+
+  const { data: submissions = [], isLoading: salesLoading, refetch: refetchSales } = useQuery<SalesSubmission[]>({
+    queryKey: ['/api/sales'],
+    enabled: isAuthenticated,
+  });
+
+  const { data: settings = {
     webhookUrl: '',
     googleSheetId: '',
     googleSheetTab: 'Sales',
@@ -90,14 +53,62 @@ function MainApp() {
     resendApiKey: '',
     resendFromEmail: '',
     resendToEmail: ''
+  }, refetch: refetchSettings } = useQuery<Partial<AppSettings>>({
+    queryKey: ['/api/settings'],
+    enabled: isAuthenticated,
   });
 
-  // todo: replace with actual user data from auth
+  const createSaleMutation = useMutation({
+    mutationFn: async (data: Record<string, any>) => {
+      const response = await apiRequest('POST', '/api/sales', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      toast({
+        title: "Sale submitted",
+        description: settings.webhookUrl 
+          ? "Sale submitted and synced successfully" 
+          : "Sale saved. Configure webhook in settings to sync.",
+      });
+      setCurrentView('dashboard');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit sale",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: Record<string, any>) => {
+      const response = await apiRequest('PATCH', '/api/settings', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
+      toast({
+        title: "Settings saved",
+        description: "Your integration settings have been updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save settings",
+        variant: "destructive",
+      });
+    },
+  });
+
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
     : user?.email || 'User';
-  const userRole: 'admin' | 'rep' = 'admin'; // todo: get from sales_reps table
-  const userDivision = 'all'; // todo: get from sales_reps table
+  const userRole: 'admin' | 'rep' = salesRep?.role === 'admin' ? 'admin' : 'rep';
+  const userDivision = salesRep?.division || 'all';
 
   const handleLogin = () => {
     window.location.href = '/api/login';
@@ -108,31 +119,20 @@ function MainApp() {
   };
 
   const handleSubmission = (formData: Record<string, any>) => {
-    const submission: SalesSubmission = {
-      id: Date.now().toString(),
-      customerFirstName: formData.customerFirstName,
-      customerLastName: formData.customerLastName,
-      customerCity: formData.customerCity,
-      customerState: formData.customerState,
-      equipmentType: formData.equipmentType,
-      saleAmount: formData.saleAmount,
-      division: formData.division,
-      leadSource: formData.leadSource,
+    const submissionData = {
+      ...formData,
+      submittedBy: user?.id,
       submittedByName: userName,
-      submittedAt: new Date(),
-      status: settings.webhookUrl ? 'synced' : 'pending'
+      installationDate: formData.installationDate ? new Date(formData.installationDate) : null,
     };
-    setSubmissions(prev => [submission, ...prev]);
-    toast({
-      title: "Sale submitted",
-      description: settings.webhookUrl 
-        ? "Sale submitted and synced successfully" 
-        : "Sale saved. Configure webhook in settings to sync.",
-    });
-    setCurrentView('dashboard');
+    createSaleMutation.mutate(submissionData);
   };
 
-  if (isLoading) {
+  const handleSaveSettings = (newSettings: Record<string, any>) => {
+    updateSettingsMutation.mutate(newSettings);
+  };
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-16 h-16 bg-primary text-primary-foreground rounded-xl flex items-center justify-center text-2xl font-bold animate-pulse">
@@ -145,6 +145,12 @@ function MainApp() {
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} />;
   }
+
+  const mappedSubmissions = submissions.map(s => ({
+    ...s,
+    submittedAt: s.submittedAt ? new Date(s.submittedAt) : new Date(),
+    status: (s.status || 'pending') as 'pending' | 'synced' | 'error',
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,7 +166,7 @@ function MainApp() {
       <main className="p-6 max-w-7xl mx-auto">
         {currentView === 'dashboard' && (
           <Dashboard
-            submissions={submissions}
+            submissions={mappedSubmissions}
             onNewSale={() => setCurrentView('new-sale')}
             userName={userName}
             userRole={userRole}
@@ -172,13 +178,25 @@ function MainApp() {
             userDivision={userDivision}
             onSubmit={handleSubmission}
             onCancel={() => setCurrentView('dashboard')}
+            isSubmitting={createSaleMutation.isPending}
           />
         )}
         
         {currentView === 'settings' && (
           <SettingsPanel
-            settings={settings}
-            onSave={setSettings}
+            settings={{
+              webhookUrl: settings.webhookUrl || '',
+              googleSheetId: settings.googleSheetId || '',
+              googleSheetTab: settings.googleSheetTab || 'Sales',
+              lidyWebhookUrl: settings.lidyWebhookUrl || '',
+              lidyApiKey: settings.lidyApiKey || '',
+              retellApiKey: settings.retellApiKey || '',
+              retellAgentId: settings.retellAgentId || '',
+              resendApiKey: settings.resendApiKey || '',
+              resendFromEmail: settings.resendFromEmail || '',
+              resendToEmail: settings.resendToEmail || '',
+            }}
+            onSave={handleSaveSettings}
             onBack={() => setCurrentView('dashboard')}
           />
         )}
