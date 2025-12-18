@@ -60,7 +60,7 @@ const EXTERNAL_LINKS = [
   },
   { 
     label: "New Sales Sheet", 
-    url: "https://docs.google.com/spreadsheets/d/1B7I38e82S8etKjfxSFOIDei2vGj2vRPYetcUegQ3ef8/edit?gid=0#gid=0", 
+    url: "https://docs.google.com/spreadsheets/d/1o732sGREl6FZCgYY8UwYwkX_Bes8phFGRANL00OcUjw/edit?gid=0#gid=0", 
     icon: FilePlus 
   },
 ];
