@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Loader2, Check, X, ExternalLink } from "lucide-react";
+import ClaudeChat from "./ClaudeChat";
 
 interface Settings {
   webhookUrl: string;
@@ -331,6 +332,8 @@ export default function SettingsPanel({ settings, onSave, onBack, isSaving = fal
             </div>
           </CardContent>
         </Card>
+
+        <ClaudeChat />
       </div>
     </div>
   );

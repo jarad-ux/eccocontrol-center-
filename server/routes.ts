@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated } from "./replit_integrations/auth";
+import { registerChatRoutes } from "./replit_integrations/chat";
 import { insertSalesSubmissionSchema, insertSalesRepSchema, insertAppSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -9,6 +10,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // Register chat routes for Claude AI
+  registerChatRoutes(app);
 
   app.get("/api/sales-reps", isAuthenticated, async (req: any, res: Response) => {
     try {

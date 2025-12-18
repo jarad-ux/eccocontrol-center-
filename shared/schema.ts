@@ -146,3 +146,6 @@ export type SalesSubmission = typeof salesSubmissions.$inferSelect;
 
 export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;
 export type AppSettings = typeof appSettings.$inferSelect;
+
+// Chat models
+export * from "./models/chat";
