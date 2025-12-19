@@ -120,6 +120,13 @@ export const appSettings = pgTable("app_settings", {
   updatedBy: varchar("updated_by"),
 });
 
+// Custom date coercion that handles both Date objects and ISO strings
+const coercedDate = z.union([
+  z.date(),
+  z.string().transform((val) => val ? new Date(val) : null),
+  z.null(),
+]).pipe(z.date().nullable());
+
 // Insert schemas
 export const insertSalesRepSchema = createInsertSchema(salesReps).omit({
   id: true,
@@ -130,6 +137,9 @@ export const insertSalesSubmissionSchema = createInsertSchema(salesSubmissions).
   id: true,
   submittedAt: true,
   syncedAt: true,
+}).extend({
+  // Override installationDate to accept string dates (from JSON serialization)
+  installationDate: coercedDate.optional(),
 });
 
 export const insertAppSettingsSchema = createInsertSchema(appSettings).omit({
