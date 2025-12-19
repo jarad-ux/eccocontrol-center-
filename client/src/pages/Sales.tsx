@@ -80,7 +80,9 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
 
   const exportMutation = useMutation({
     mutationFn: async (ids?: string[]) => {
-      const response = await apiRequest('POST', '/api/sales/export-sheets', { saleIds: ids });
+      const body = ids && ids.length > 0 ? { saleIds: ids } : {};
+      console.log('Exporting sales with body:', body);
+      const response = await apiRequest('POST', '/api/sales/export-sheets', body);
       return response.json();
     },
     onSuccess: (data: { exported: number; failed: number; message: string }) => {
@@ -288,7 +290,11 @@ export default function Sales({ userRole, userName }: SalesPageProps) {
             />
           </div>
           <Button 
-            onClick={() => exportMutation.mutate(selectedIds.size > 0 ? Array.from(selectedIds) : undefined)} 
+            onClick={() => {
+              const idsToExport = selectedIds.size > 0 ? Array.from(selectedIds) : undefined;
+              console.log('Export button clicked, selectedIds size:', selectedIds.size, 'ids:', idsToExport);
+              exportMutation.mutate(idsToExport);
+            }} 
             variant="outline" 
             size="sm" 
             disabled={exportMutation.isPending}
